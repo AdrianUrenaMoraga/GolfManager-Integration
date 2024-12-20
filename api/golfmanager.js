@@ -6,8 +6,8 @@ const getTenants = async () => {
     try {
         const response = await axios.get(`${process.env.BASE_URL}/clients`, {
             auth: {
-                username: process.env.USER,
-                password: process.env.PASSWORD,
+                username: process.env.USER_GM,
+                password: process.env.PASSWORD_GM,
             },
             params: {
                 tenant: process.env.TENANT, // Tenant as query parameter
@@ -29,8 +29,8 @@ const getClients = async () => {
     try {
         const response = await axios.get(`${process.env.BASE_URL}/clientsfull`, {
             auth: {
-                username: process.env.USER,
-                password: process.env.PASSWORD,
+                username: process.env.USER_GM,
+                password: process.env.PASSWORD_GM,
             },
             params: {
                 tenant: process.env.TENANT, // Tenant as query parameter
@@ -61,8 +61,8 @@ async function getClientsFull() {
 
             const response = await axios.get(`${process.env.BASE_URL}/ClientsFull`, {
             auth: {
-                username: process.env.USER,
-                password: process.env.PASSWORD,
+                username: process.env.USER_GM,
+                password: process.env.PASSWORD_GM,
             },
             params: {
                 tenant: process.env.TENANT,
@@ -94,8 +94,8 @@ async function getClientFullByID(golfContactID) {
     try {
         const response = await axios.get(`${process.env.BASE_URL}/clientsfull`, {
             auth: {
-                username: process.env.USER,
-                password: process.env.PASSWORD,
+                username: process.env.USER_GM,
+                password: process.env.PASSWORD_GM,
             },
             params: {
                 tenant: process.env.TENANT, // Tenant as query parameter
@@ -119,8 +119,8 @@ const getTags = async () => {
     try {
         const response = await axios.get(`${process.env.BASE_URL}/clientTags`, {
             auth: {
-                username: process.env.USER,
-                password: process.env.PASSWORD,
+                username: process.env.USER_GM,
+                password: process.env.PASSWORD_GM,
             },
             params: {
                 tenant: process.env.TENANT, 
@@ -144,8 +144,8 @@ const getReservations = async (start,end) => {
     try {
         const response = await axios.get(`${process.env.BASE_URL}/Reservations`, {
             auth: {
-                username: process.env.USER,
-                password: process.env.PASSWORD,
+                username: process.env.USER_GM,
+                password: process.env.PASSWORD_GM,
             },
             params: {
                 tenant: process.env.TENANT, 
