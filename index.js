@@ -1,13 +1,13 @@
 require('dotenv').config();
 const axios = require('axios');
 
-
 const {getClients,getClientsFull,getClientFullByID,getReservations,getTenants,getTags} = require('./api/golfmanager');
 const {createOrUpdateContactInHubSpot,createOrUpdateDealInHubSpot,createOrUpdateCompanyInHubSpot,getAllContactsFromHubSpot,associateDealWithContact, associateDealWithCompany} = require('./api/hubspot');
 
 const freeEmailDomains = [
     "gmail.com",
     "yahoo.com",
+    "yahoo.es",
     "hotmail.com",
     "outlook.com",
     "icloud.com",
@@ -19,6 +19,40 @@ const freeEmailDomains = [
     "gmx.com",
 ];
 
+const hubspotTags = [
+    { id: "12", name: "ABONADO 2019" },
+    { id: "18", name: "ABONADO AF PREMIUM" },
+    { id: "19", name: "ABONADO AF STANDARD" },
+    { id: "15", name: "ABONADO AI PREMIUM" },
+    { id: "5", name: "ABONADO AI STANDARD" },
+    { id: "29", name: "ABONADO ALBATROS" },
+    { id: "17", name: "ABONADO AM PREMIUM" },
+    { id: "16", name: "ABONADO AM STANDARD" },
+    { id: "20", name: "ABONADO CORPORATIVO 2T" },
+    { id: "21", name: "ABONADO CORPORATIVO 4T" },
+    { id: "31", name: "ABONADO EAGLE" },
+    { id: "7", name: "ABONADO SEMESTRAL" },
+    { id: "30", name: "ABONADO SUNSET" },
+    { id: "6", name: "ABONADO TRIMESTRAL" },
+    { id: "24", name: "ALDIANA" },
+    { id: "8", name: "GOLF DESK" },
+    { id: "14", name: "GOLF EXPERIENCE" },
+    { id: "13", name: "GOLF SERVICE" },
+    { id: "23", name: "GOLFBREAKS" },
+    { id: "4", name: "HOTEL" },
+    { id: "9", name: "HOTEL RESIDENTE SO" },
+    { id: "26", name: "MARKETING" },
+    { id: "32", name: "RCG VALDERRAMA" },
+    { id: "22", name: "REAL CLUB GOLF SOTOGRANDE" },
+    { id: "28", name: "SO" },
+    { id: "27", name: "STAFF" },
+    { id: "25", name: "So | Sotogrande" },
+    { id: "2", name: "TTOO" },
+    { id: "10", name: "TTOO RESIDENTE SO" },
+    { id: "1", name: "VISITANTE" }
+];
+
+
 (async () => {
     try {
         //const clients = await getClients();
@@ -26,10 +60,11 @@ const freeEmailDomains = [
         var start = getCurrentDate();
         var end = getCurrentDate();
         */
-        var start = '2020-01-01';
-        var end = '2020-11-25';
+        var start = '2020-10-01';
+        var end = '2020-12-22';
 
         const deals = await getReservations(start,end);
+
 
         for (const golfReservation of deals) {
              console.log(`Processing deal with id_mbudo: ${golfReservation.id}`);
@@ -44,7 +79,7 @@ const freeEmailDomains = [
                     console.log(`No client data found for id_mbudo: ${golfReservation.idClient}`);
                     continue;
                 }
-                const hubspotContact = await createOrUpdateContactInHubSpot(golfClient.id, golfClient); 
+                const hubspotContact = await createOrUpdateContactInHubSpot(golfClient.id, golfClient, hubspotTags); 
                 
                 if (hubspotContact) {
                    console.log(`Associating deal ${hubspotDeal.id} with contact ${hubspotContact.id}`);

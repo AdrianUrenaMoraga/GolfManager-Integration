@@ -2,16 +2,16 @@ const hubspotAPI = require('./hubspotapi'); // Import the instance
 const {insertLog,updateLog,insertExceptionLog}  = require('../db/dblogger');
 const genderMapping = { 1: "male", 0: "female" };
 
-async function createOrUpdateContactInHubSpot(golfClientId, golfClient) {
+async function createOrUpdateContactInHubSpot(golfClientId, golfClient, hubspotTags) {
     try {   
         const hubspotContact = await searchContactByIdMbudo(golfClientId);
         
         if (hubspotContact) {
             console.log("Contact found with Id:-"+golfClientId+"-");
-            return await updateContactInHubSpot(hubspotContact.id, golfClient);
+            return await updateContactInHubSpot(hubspotContact.id, golfClient, hubspotTags);
         } else {
             console.log("New contact to be created with id-"+golfClientId+"-");
-            return await createContactInHubSpot(golfClient);
+            return await createContactInHubSpot(golfClient, hubspotTags);
         }
     } catch (error) {
         console.error('Unexpected error in createOrUpdateContactInHubSpot:', error.message);
@@ -129,7 +129,7 @@ async function searchContactByIdMbudo(idMbudo) {
     }
 }
 
-async function updateContactInHubSpot(contactId, contact) {
+async function updateContactInHubSpot(contactId, contact, hubspotTags) {
     const payload = {
         properties: {
             firstname: contact.customfields_firstname || '',
@@ -142,7 +142,7 @@ async function updateContactInHubSpot(contactId, contact) {
             gm_createuser: contact.idCreateUser || '',
             gm_groupid: contact.idGroup || '',
             gm_invoicesemail : contact.idInvoiceClient || '',
-            gm_tags: formatTags(contact.idTags) || '',
+            gm_tags: validateAndFormatTags(contact.idTags, hubspotTags) || '',
             gm_invoicesemail: contact.invoicesEmail || '',
             gm_isagency: contact.isAgency || '',
             gm_iscompany: contact.isCompany || '',
@@ -189,7 +189,7 @@ async function updateContactInHubSpot(contactId, contact) {
     }
 }
 
-async function createContactInHubSpot(contact) {
+async function createContactInHubSpot(contact, hubspotTags) {
     const payload = {
         properties: {
             firstname: contact.customfields_firstname || '',
@@ -202,7 +202,7 @@ async function createContactInHubSpot(contact) {
             gm_createuser: contact.idCreateUser || '',
             gm_groupid: contact.idGroup || '',
             gm_invoicesemail : contact.invoicesEmail || '',
-            gm_tags: formatTags(contact.idTags) || '',
+            gm_tags: validateAndFormatTags(contact.idTags, hubspotTags)  || '',
             gm_invoicesemail: contact.invoicesEmail || '',
             gm_isagency: contact.isAgency || '',
             gm_iscompany: contact.isCompany || '',
@@ -326,7 +326,8 @@ async function createDealInHubSpot(dealData) {
             gm_start: convertToMidnightUTC(dealData.start) || "",
             gm_subfamilyname: dealData.subfamilyName || "", 
             amount: dealData.total || 0,
-            closedate: dealData.closedate || "", // Optional: Close date
+            createdate: convertToMidnightUTC(dealData.createDate) || "",
+            closedate: dealData.checkin ? convertToMidnightUTC(dealData.end) : "", // Optional: Close date
             dealstage: getDealStage(dealData) || 'appointmentscheduled', // Required: Deal stage
             pipeline: 'default', // Required: Pipeline
         },
@@ -401,7 +402,7 @@ async function updateDealInHubSpot(dealId, dealData) {
             gm_start: convertToMidnightUTC(dealData.start) || "",
             gm_subfamilyname: dealData.subfamilyName || "", 
             amount: dealData.total ,
-            closedate: convertToMidnightUTC(dealData.end) || "", // Optional: Close date
+            closedate: dealData.checkin ? convertToMidnightUTC(dealData.end) : "", // Optional: Close date
             dealstage: getDealStage(dealData), // Required: Deal stage
             pipeline: 'default', // Required: Pipeline
         },
@@ -619,8 +620,8 @@ async function associateDealWithCompany(dealId, companyId) {
 function convertToMidnightUTC(dateString) {
     const date = new Date(dateString);
     // Set time to midnight UTC
-    date.setUTCHours(0, 0, 0, 0);
-    return date.getTime(); // Return milliseconds since epoch
+    //date.setUTCHours(0, 0, 0, 0);
+    return date.getTime();
 }
 
 function getDealStage(dealData) {
@@ -665,9 +666,23 @@ function findById(dataArray, searchId) {
     return dataArray.find(item => item.id === searchId);
 }
 
-function formatTags(tags) {
-    if (!tags) return ""; // Handle empty or undefined values
-    return tags.split(",").join(";"); // Transform "4,2,27" to "4;2;27"
+function validateAndFormatTags(tagListString, hubspotTags) {
+
+    if(!tagListString){
+        return "";
+    }
+    const tagIds = tagListString.split(','); // Split the string into an array of tag IDs
+
+    for (const tagId of tagIds) {
+        const tag = hubspotTags.find(item => item.id === tagId);
+        if (!tag) {
+            console.log(`Invalid tag found: ${tagId}`);
+            return ""; // Return empty string if any tag is invalid
+        }
+    }
+
+    // If all tags are valid, return them as a semicolon-separated string
+    return tagIds.join(';');
 }
 
 function validateEmail(email) {
