@@ -660,8 +660,8 @@ function convertToMidnightUTC(dateString) {
         return "";
     }
     const date = new Date(dateString);
-    // Calculate the UTC-6 offset in milliseconds
-    const offset = 6 * 60 * 60 * 1000; // 6 hours in milliseconds
+    // Calculate the UTC-5 offset in milliseconds
+    const offset = 5 * 60 * 60 * 1000; // 6 hours in milliseconds
 
     // Adjust the date to UTC-6
     const utcMinus6Date = new Date(date.getTime() + offset);
