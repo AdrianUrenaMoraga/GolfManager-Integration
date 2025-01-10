@@ -189,7 +189,7 @@ async function updateContactInHubSpot(contactId, contact, hubspotTags) {
     }
 }
 
-async function createContactInHubSpot(contact, hubspotTags) {
+async function createContactInHubSpot(contact, hubspotTags, retries = 5, delay = 1000) {
     const payload = {
         properties: {
             firstname: contact.customfields_firstname || '',
@@ -235,6 +235,27 @@ async function createContactInHubSpot(contact, hubspotTags) {
         console.log(`Contact created in HubSpot: ${response.data.id}`);
 
         await updateLog(logId, 'success', response.data, response.data.id);
+
+        let found = false;
+
+        // Retry searching for the created contact
+        for (let attempt = 0; attempt < retries; attempt++) {
+            console.log(`Searching for contact. Attempt ${attempt + 1} of ${retries}`);
+            const searchResponse = await searchContactByIdMbudo(contact.id);
+
+            if (searchResponse) {
+                console.log('Contact confirmed:');
+                found = true;
+                break; // Exit the loop early if the contact is found
+            }
+
+            // Wait before retrying
+            await new Promise(resolve => setTimeout(resolve, delay));
+        }
+
+        if (!found) {
+            console.log('Contact creation confirmed but not found in subsequent searches.');
+        }
 
         return response.data;
     } catch (error) {
@@ -482,7 +503,7 @@ async function searchCompanyByIdMbudo(idMbudo) {
     }
 }
 
-async function createCompanyInHubSpot(companyData, domain) {
+async function createCompanyInHubSpot(companyData, domain, retries = 2, delay = 1000) {
     const payload = {
         properties: {
             name: companyData.name || '',
@@ -503,6 +524,22 @@ async function createCompanyInHubSpot(companyData, domain) {
         const response = await hubspotAPI.post('/crm/v3/objects/companies', payload);
         console.log(`Company created in HubSpot: ${response.data.id}`);
         await updateLog(logId, 'success', response.data, response.data.id);
+
+
+        for (let attempt = 0; attempt < retries; attempt++) {
+            console.log(`Searching for company. Attempt ${attempt + 1} of ${retries}`);
+            const searchResponse = await searchCompanyByIdMbudo(companyData.id);
+
+            if (searchResponse) {
+                console.log('Company confirmed:');
+                found = true;
+                break; // Exit the loop early if the contact is found
+            }
+
+            // Wait before retrying
+            await new Promise(resolve => setTimeout(resolve, delay));
+        }
+
         return response.data;
     } catch (error) {
         const responseError = error.response ? error.response.data : { message: error.message };
@@ -618,10 +655,17 @@ async function associateDealWithCompany(dealId, companyId) {
 }
 
 function convertToMidnightUTC(dateString) {
+
+    if (!dateString || dateString === "") {
+        return "";
+    }
     const date = new Date(dateString);
-    // Set time to midnight UTC
-    //date.setUTCHours(0, 0, 0, 0);
-    return date.getTime();
+    // Calculate the UTC-6 offset in milliseconds
+    const offset = 6 * 60 * 60 * 1000; // 6 hours in milliseconds
+
+    // Adjust the date to UTC-6
+    const utcMinus6Date = new Date(date.getTime() + offset);
+    return utcMinus6Date;
 }
 
 function getDealStage(dealData) {

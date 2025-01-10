@@ -1,18 +1,36 @@
-npm install mysql2
+# Project Setup
 
-tests
+To install the necessary dependencies, run the following commands:
+
+```sh
+npm install mysql2
+```
+
+## Running Tests
+
+To install the testing dependencies, run:
+
+```sh
 npm install --save-dev jest
 npm install --save-dev nock
+```
 
+To execute the tests, use the following command:
 
-Test 1:
-Id viene correo diferente
+```sh
+npm test
+```
 
-Test 2:
-Un correo esta para dos Ids
+## Test Cases
 
-test 3:
-No viene Id
+### Test 1:
+An ID comes with a different email
 
-test 4:
-No viene Correo
+### Test 2:
+An email is associated with two IDs
+
+### Test 3:
+No ID is provided
+
+### Test 4:
+No email is provided

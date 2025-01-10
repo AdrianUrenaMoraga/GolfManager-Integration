@@ -57,20 +57,20 @@ const hubspotTags = [
     try {
         //const clients = await getClients();
 
-        var start = getCurrentDate();
-        var end = getCurrentDate();
+        var date = getCurrentDate();
         
-        var startFormatted = `${start}T00:00:00+01:00`;
-        var endFormatted = `${end}T23:00:00+01:00`;
+        var startFormatted = `${date}T00:00:00+01:00`;
+        var endFormatted = `${date}T23:00:00+01:00`;
         
         /*
         var start = '2024-01-01';
         var end = '2024-12-22';
         */
-       console.log('start:', start);
+        console.log('start:', startFormatted);
+        console.log('end:', endFormatted);
         const deals = await getReservations(startFormatted,endFormatted);
 
-        console.log(JSON.stringify(deals));
+        //console.log(JSON.stringify(deals));
         
         for (const golfReservation of deals) {
              console.log(`Processing deal with id_mbudo: ${golfReservation.id}`);
