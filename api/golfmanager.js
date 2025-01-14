@@ -166,4 +166,29 @@ const getReservations = async (start,end) => {
     }
 };
 
-module.exports = {getClients,getClientsFull,getClientFullByID,getReservations,getTenants,getTags};
+const getReservationsByID = async (Id) => {
+    try {
+        const response = await axios.get(`${process.env.BASE_URL}/Reservations`, {
+            auth: {
+                username: process.env.USER_GM,
+                password: process.env.PASSWORD_GM,
+            },
+            params: {
+                tenant: process.env.TENANT, 
+                idClient: Id,
+            },
+        });
+
+        // Log the response data
+        //console.log('Response:', response.data);
+        return response.data;
+    } catch (error) {
+        // Handle errors
+        console.error('Error fetching reservations:', error.message);
+        if (error.response) {
+            console.error('Error details:', error.response.data);
+        }
+    }
+};
+
+module.exports = {getReservationsByID,getClients,getClientsFull,getClientFullByID,getReservations,getTenants,getTags};

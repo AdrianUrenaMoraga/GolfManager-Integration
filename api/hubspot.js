@@ -1,17 +1,25 @@
 const hubspotAPI = require('./hubspotapi'); // Import the instance
 const {insertLog,updateLog,insertExceptionLog}  = require('../db/dblogger');
+const { response } = require('express');
 const genderMapping = { 1: "male", 0: "female" };
 
-async function createOrUpdateContactInHubSpot(golfClientId, golfClient, hubspotTags) {
+async function createOrUpdateContactInHubSpot(golfClientId, golfClient, hubspotTags, clientName) {
     try {   
         const hubspotContact = await searchContactByIdMbudo(golfClientId);
-        
-        if (hubspotContact) {
-            console.log("Contact found with Id:-"+golfClientId+"-");
-            return await updateContactInHubSpot(hubspotContact.id, golfClient, hubspotTags);
+        let hubspotContactEmail = null;
+
+        if(golfClient.email){
+            hubspotContactEmail = await searchContactByEmail(golfClient.email);
+        }
+        if (hubspotContactEmail) {
+            console.log("Contact found with same email: "+golfClient.email);
+            return await updateContactInHubSpot(hubspotContactEmail.id, golfClient, hubspotTags, clientName);
+        } else if (hubspotContact){
+            console.log("Contact found with Id: "+golfClientId);
+            return await updateContactInHubSpot(hubspotContact.id, golfClient, hubspotTags, clientName);
         } else {
-            console.log("New contact to be created with id-"+golfClientId+"-");
-            return await createContactInHubSpot(golfClient, hubspotTags);
+            console.log("New contact to be created with id: "+golfClientId);
+            return await createContactInHubSpot(golfClient, hubspotTags, clientName);
         }
     } catch (error) {
         console.error('Unexpected error in createOrUpdateContactInHubSpot:', error.message);
@@ -57,22 +65,35 @@ async function createOrUpdateCompanyInHubSpot(companyIds, companyData, domain) {
 }
 
 //Support methods
-async function searchContactByEmail() {
+async function searchContactByEmail(email) {
   try {
+    const payload = {
+        filterGroups: [
+            {
+                filters: [
+                    {
+                        propertyName: 'email', // Custom property used as unique identifier
+                        operator: 'EQ',
+                        value: email,
+                    },
+                ],
+            },
+        ],
+        properties: ['firstname', 'email','phone', 'gm_id'], // Properties to fetch
+    };
     const response = await hubspotAPI.get(`/crm/v3/objects/contacts`);
 
-    if (response.data) {
-      const contact = response.data;
-      console.log('Contact found:', contact);
-      //return contact; // Return existing contact ID
-    } else {
-      console.log('No contact found with email:', email);
-      return null;
-    }
+    if (response.data.total > 0) {
+            const contact = response.data.results[0];
+            return contact; // Return the existing company ID
+        } else {
+            console.log('No contact found with email:', email);
+            return null;
+        }
   } catch (error) {
     if (error.response && error.response.status === 404) {
       console.log('No contact found with email:', email);
-      await insertExceptionLog(error);
+  
       return null;
     }
     console.error('Error searching contact by email:', error.response ? error.response.data : error);
@@ -129,10 +150,20 @@ async function searchContactByIdMbudo(idMbudo) {
     }
 }
 
-async function updateContactInHubSpot(contactId, contact, hubspotTags) {
+async function updateContactInHubSpot(contactId, contact, hubspotTags, clientName) {
+    console.log("clientName: ",clientName);
+    console.log("custom name: ",contact.customfields_firstname);
+    let name = "";
+    if (contact.customfields_firstname){
+        name = contact.customfields_firstname;
+    }else if(clientName){
+        name = clientName;
+    }else{
+        name = contact.name;
+    }
     const payload = {
         properties: {
-            firstname: contact.customfields_firstname || '',
+           firstname: name || '',
             lastname: contact.customfields_lastname || '',
             gm_lastname2: contact.customfields_lastname2 || '',
             email: validateEmail(contact.email)  || '',
@@ -142,7 +173,7 @@ async function updateContactInHubSpot(contactId, contact, hubspotTags) {
             gm_createuser: contact.idCreateUser || '',
             gm_groupid: contact.idGroup || '',
             gm_invoicesemail : contact.idInvoiceClient || '',
-            gm_tags: validateAndFormatTags(contact.idTags, hubspotTags) || '',
+            gm_tag: validateAndFormatTags(contact.idTags, hubspotTags) || '',
             gm_invoicesemail: contact.invoicesEmail || '',
             gm_isagency: contact.isAgency || '',
             gm_iscompany: contact.isCompany || '',
@@ -189,10 +220,10 @@ async function updateContactInHubSpot(contactId, contact, hubspotTags) {
     }
 }
 
-async function createContactInHubSpot(contact, hubspotTags, retries = 5, delay = 1000) {
+async function createContactInHubSpot(contact, hubspotTags, clientName, retries = 8, delay = 1000) {
     const payload = {
         properties: {
-            firstname: contact.customfields_firstname || '',
+            firstname: contact.customfields_firstname ? clientName || '': '',
             lastname: contact.customfields_lastname || '',
             gm_lastname2: contact.customfields_lastname2 || '',
             email: validateEmail(contact.email) || '',
@@ -202,7 +233,7 @@ async function createContactInHubSpot(contact, hubspotTags, retries = 5, delay =
             gm_createuser: contact.idCreateUser || '',
             gm_groupid: contact.idGroup || '',
             gm_invoicesemail : contact.invoicesEmail || '',
-            gm_tags: validateAndFormatTags(contact.idTags, hubspotTags)  || '',
+            gm_tag: validateAndFormatTags(contact.idTags, hubspotTags)  || '',
             gm_invoicesemail: contact.invoicesEmail || '',
             gm_isagency: contact.isAgency || '',
             gm_iscompany: contact.isCompany || '',
@@ -244,7 +275,7 @@ async function createContactInHubSpot(contact, hubspotTags, retries = 5, delay =
             const searchResponse = await searchContactByIdMbudo(contact.id);
 
             if (searchResponse) {
-                console.log('Contact confirmed:');
+                console.log('Contact confirmed');
                 found = true;
                 break; // Exit the loop early if the contact is found
             }
@@ -503,17 +534,18 @@ async function searchCompanyByIdMbudo(idMbudo) {
     }
 }
 
-async function createCompanyInHubSpot(companyData, domain, retries = 2, delay = 1000) {
-    const payload = {
+async function createCompanyInHubSpot(companyData, domain, retries = 8, delay = 1000) {
+    let payload = {
         properties: {
             name: companyData.name || '',
-            gm_email: companyData.email || '', // Domain is often used for companies in HubSpot
+            gm_email: companyData.email || '', // Optional email property
             gm_id: companyData.id, // Custom property for unique ID
-            domain: domain || '',
+            domain: domain || '', // Domain property
         },
     };
 
     let logId;
+
     try {
         logId = await insertLog('company', 'create', payload);
         if (!logId) {
@@ -521,33 +553,56 @@ async function createCompanyInHubSpot(companyData, domain, retries = 2, delay = 
             await insertExceptionLog('Failed to insert log. Aborting request.');
             return null;
         }
-        const response = await hubspotAPI.post('/crm/v3/objects/companies', payload);
-        console.log(`Company created in HubSpot: ${response.data.id}`);
-        await updateLog(logId, 'success', response.data, response.data.id);
 
+        // Attempt to create the company
+        try {
+            const response = await hubspotAPI.post('/crm/v3/objects/companies', payload);
+            console.log(`Company created in HubSpot: ${response.data.id}`);
+            await updateLog(logId, 'success', response.data, response.data.id);
+        } catch (error) {
+            const responseError = error.response ? error.response.data : { message: error.message };
 
+            // Handle invalid domain error
+            if (responseError.message && responseError.message.includes("INVALID_DOMAIN")) {
+                console.warn(`Invalid domain detected: ${payload.properties.domain}. Retrying without domain.`);
+                delete payload.properties.domain; // Remove domain property
+
+                // Retry without the domain
+                const response = await hubspotAPI.post('/crm/v3/objects/companies', payload);
+                console.log(`Company created in HubSpot (without domain): ${response.data.id}`);
+                await updateLog(logId, 'success', response.data, response.data.id);
+            } else {
+                console.error('Error creating company in HubSpot:', responseError);
+                await updateLog(logId, 'failure', responseError);
+                return null; // Stop on non-domain-related errors
+            }
+        }
+
+        // Search for the company by gm_id to confirm creation
         for (let attempt = 0; attempt < retries; attempt++) {
-            console.log(`Searching for company. Attempt ${attempt + 1} of ${retries}`);
+            console.log(`Searching for company by gm_id. Attempt ${attempt + 1} of ${retries}`);
             const searchResponse = await searchCompanyByIdMbudo(companyData.id);
 
             if (searchResponse) {
-                console.log('Company confirmed:');
-                found = true;
-                break; // Exit the loop early if the contact is found
+                console.log(`Company confirmed: ${searchResponse}`);
+                return response.data; // Return the company ID if found
             }
 
             // Wait before retrying
             await new Promise(resolve => setTimeout(resolve, delay));
         }
 
+        console.error('Failed to confirm company creation after retries.');
+        await updateLog(logId, 'failure', { message: 'Failed to confirm company creation after retries' });
         return response.data;
     } catch (error) {
         const responseError = error.response ? error.response.data : { message: error.message };
-        console.error('Error creating company in HubSpot:', responseError);
+        console.error('Error during company creation process:', responseError);
         await updateLog(logId, 'failure', responseError);
         return null;
     }
 }
+
 
 async function updateCompanyInHubSpot(companyId, companyData) {
     const payload = {
@@ -748,4 +803,4 @@ function validateEmail(email) {
     return validTLDs.includes(tld) ? email : "";
 }
 
-module.exports = {createOrUpdateContactInHubSpot,createOrUpdateDealInHubSpot,createOrUpdateCompanyInHubSpot,getAllContactsFromHubSpot,associateDealWithContact, associateDealWithCompany};
+module.exports = {createCompanyInHubSpot,createOrUpdateContactInHubSpot,createOrUpdateDealInHubSpot,createOrUpdateCompanyInHubSpot,getAllContactsFromHubSpot,associateDealWithContact, associateDealWithCompany};
