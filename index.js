@@ -63,7 +63,7 @@ const hubspotTags = [
         var endFormatted = `${date}T23:00:00+01:00`;
         */ 
         var startFormatted = `2025-01-01T01:00:00+01:00`;
-        var endFormatted = `2025-31-01T23:40:00+01:00`;
+        var endFormatted = `2025-01-31T23:00:00+01:00`;
         
         console.log('start:', startFormatted);
         console.log('end:', endFormatted);

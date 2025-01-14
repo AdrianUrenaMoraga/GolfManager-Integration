@@ -151,8 +151,6 @@ async function searchContactByIdMbudo(idMbudo) {
 }
 
 async function updateContactInHubSpot(contactId, contact, hubspotTags, clientName) {
-    console.log("clientName: ",clientName);
-    console.log("custom name: ",contact.customfields_firstname);
     let name = "";
     if (contact.customfields_firstname){
         name = contact.customfields_firstname;
@@ -221,9 +219,17 @@ async function updateContactInHubSpot(contactId, contact, hubspotTags, clientNam
 }
 
 async function createContactInHubSpot(contact, hubspotTags, clientName, retries = 8, delay = 1000) {
+    let name = "";
+    if (contact.customfields_firstname){
+        name = contact.customfields_firstname;
+    }else if(clientName){
+        name = clientName;
+    }else{
+        name = contact.name;
+    }
     const payload = {
         properties: {
-            firstname: contact.customfields_firstname ? clientName || '': '',
+            firstname: name || '',
             lastname: contact.customfields_lastname || '',
             gm_lastname2: contact.customfields_lastname2 || '',
             email: validateEmail(contact.email) || '',
