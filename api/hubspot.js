@@ -81,7 +81,7 @@ async function searchContactByEmail(email) {
         ],
         properties: ['firstname', 'email','phone', 'gm_id'], // Properties to fetch
     };
-    const response = await hubspotAPI.get(`/crm/v3/objects/contacts`);
+    const response = await hubspotAPI.post(`/crm/v3/objects/contacts/search`,payload);
 
     if (response.data.total > 0) {
             const contact = response.data.results[0];
@@ -218,7 +218,7 @@ async function updateContactInHubSpot(contactId, contact, hubspotTags, clientNam
     }
 }
 
-async function createContactInHubSpot(contact, hubspotTags, clientName, retries = 8, delay = 1000) {
+async function createContactInHubSpot(contact, hubspotTags, clientName, retries = 100, delay = 1000) {
     let name = "";
     if (contact.customfields_firstname){
         name = contact.customfields_firstname;
@@ -478,7 +478,7 @@ async function updateDealInHubSpot(dealId, dealData) {
 
         const response = await hubspotAPI.patch(`/crm/v3/objects/deals/${dealId}`, payload);
 
-        console.log(`Deal updated in HubSpot: ${dealId.id}`);
+        console.log(`Deal updated in HubSpot: ${dealId}`);
 
         await updateLog(logId, 'success', response.data, dealData.id);
 
@@ -540,7 +540,7 @@ async function searchCompanyByIdMbudo(idMbudo) {
     }
 }
 
-async function createCompanyInHubSpot(companyData, domain, retries = 8, delay = 1000) {
+async function createCompanyInHubSpot(companyData, domain, retries = 10, delay = 1000) {
     let payload = {
         properties: {
             name: companyData.name || '',

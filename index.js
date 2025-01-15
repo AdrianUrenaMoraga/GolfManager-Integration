@@ -69,61 +69,56 @@ const hubspotTags = [
         console.log('end:', endFormatted);
         const deals = await getReservations(startFormatted,endFormatted);
 
-
         for (const golfReservation of deals) {
-    console.log(`Processing deal with id_mbudo: ${golfReservation.id}`);
-    const hubspotDeal = await createOrUpdateDealInHubSpot(golfReservation);
-    if (hubspotDeal) {
-        console.log(`Deal processed successfully: ${hubspotDeal.id}`);
+            console.log(`Processing deal with id_mbudo: ${golfReservation.id}`);
+            const hubspotDeal = await createOrUpdateDealInHubSpot(golfReservation);
+            if (hubspotDeal) {
+                console.log(`Deal processed successfully: ${hubspotDeal.id}`);
 
-        // Attempt to associate the deal with a contact
-        const golfClient = await getClientFullByID(golfReservation.idClient);
+                // Attempt to associate the deal with a contact
+                const golfClient = await getClientFullByID(golfReservation.idClient);
 
-        
+                const hubspotContact = await createOrUpdateContactInHubSpot(golfClient.id, golfClient, hubspotTags, golfReservation.clientName);
+                if (hubspotContact) {
+                    console.log(`Associating deal ${hubspotDeal.id} with contact ${hubspotContact.id}`);
+                    await associateDealWithContact(hubspotDeal.id, hubspotContact.id);
+                } else {
+                    console.log(`No matching contact found for deal id_mbudo: ${golfReservation.idClient}`);
+                }
 
-        const hubspotContact = await createOrUpdateContactInHubSpot(golfClient.id, golfClient, hubspotTags, golfReservation.clientName);
-        if (hubspotContact) {
-            console.log(`Associating deal ${hubspotDeal.id} with contact ${hubspotContact.id}`);
-            await associateDealWithContact(hubspotDeal.id, hubspotContact.id);
-        } else {
-            console.log(`No matching contact found for deal id_mbudo: ${golfReservation.idClient}`);
-        }
+                if (!golfClient || !golfClient.id) {
+                    console.log(`No client data found for id_mbudo: ${golfReservation.idClient}`);
+                    continue;
+                }
 
+                const selectedEmail = golfClient.email || golfReservation.email;
 
-        if (!golfClient || !golfClient.id) {
-            console.log(`No client data found for id_mbudo: ${golfReservation.idClient}`);
-            continue;
-        }
+                if (!selectedEmail) {
+                    console.log(`No email found for deal id_mbudo: ${golfReservation.id}`);
+                    continue; // Skip further processing if no email is available
+                }
 
-        const selectedEmail = golfClient.email || golfReservation.email;
+                console.log(`Using email: ${selectedEmail}`);
+                const domain = selectedEmail.split("@")[1]?.toLowerCase();
 
-        if (!selectedEmail) {
-            console.log(`No email found for deal id_mbudo: ${golfReservation.id}`);
-            continue; // Skip further processing if no email is available
-        }
-
-        console.log(`Using email: ${selectedEmail}`);
-        const domain = selectedEmail.split("@")[1]?.toLowerCase();
-
-        if (freeEmailDomains.includes(domain)) {
-            console.log(`Skipping company creation for free email domain: ${domain}`);
-        } else {
-            console.log(`Creating company for domain: ${domain}`);
-            const hubspotCompany = await createOrUpdateCompanyInHubSpot(golfClient.id, golfClient, domain);
-            if (hubspotCompany) {
-                console.log(`Associating deal ${hubspotDeal.id} with company ${hubspotCompany.id}`);
-                await associateDealWithCompany(hubspotDeal.id, hubspotCompany.id);
-            } else {
-                console.log(`No matching company found for deal id_mbudo: ${golfReservation.idClient}`);
+                if (freeEmailDomains.includes(domain)) {
+                    console.log(`Skipping company creation for free email domain: ${domain}`);
+                } else {
+                    console.log(`Creating company for domain: ${domain}`);
+                    const hubspotCompany = await createOrUpdateCompanyInHubSpot(golfClient.id, golfClient, domain);
+                if (hubspotCompany) {
+                    console.log(`Associating deal ${hubspotDeal.id} with company ${hubspotCompany.id}`);
+                    await associateDealWithCompany(hubspotDeal.id, hubspotCompany.id);
+                } else {
+                    console.log(`No matching company found for deal id_mbudo: ${golfReservation.idClient}`);
+                }
             }
+        } else {
+            console.log('Failed to process deal. Check logs for details.');
         }
-    } else {
-        console.log('Failed to process deal. Check logs for details.');
     }
-}
-console.log('All deals processed');
-
-        
+    console.log('All deals processed');
+    
     } catch (error) {
         console.error('Error during client or reservation processing:', error.message);
     }

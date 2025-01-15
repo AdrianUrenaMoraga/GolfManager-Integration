@@ -166,7 +166,7 @@ const getReservations = async (start,end) => {
     }
 };
 
-const getReservationsByID = async (Id) => {
+const getReservationsByID = async (IdClient) => {
     try {
         const response = await axios.get(`${process.env.BASE_URL}/Reservations`, {
             auth: {
@@ -175,13 +175,13 @@ const getReservationsByID = async (Id) => {
             },
             params: {
                 tenant: process.env.TENANT, 
-                idClient: Id,
+                idClient: IdClient,
             },
         });
 
         // Log the response data
         //console.log('Response:', response.data);
-        return response.data;
+        return Array.isArray(response.data) ? response.data : [];
     } catch (error) {
         // Handle errors
         console.error('Error fetching reservations:', error.message);
