@@ -51,10 +51,10 @@ async function createOrUpdateCompanyInHubSpot(companyIds, companyData, domain) {
         const companyId = await searchCompanyByIdMbudo(companyIds);
 
         if (companyId) {
-            console.log("company found with id:-"+companyIds+"-updating");
+            console.log("company found with id: "+companyIds);
             return await updateCompanyInHubSpot(companyId, companyData);
         } else {
-            console.log("company not found with id:-"+companyIds+"-creating");
+            console.log("company not found with id: "+companyIds);
             return await createCompanyInHubSpot(companyData,domain);
         }
     } catch (error) {
@@ -171,7 +171,7 @@ async function updateContactInHubSpot(contactId, contact, hubspotTags, clientNam
             gm_createuser: contact.idCreateUser || '',
             gm_groupid: contact.idGroup || '',
             gm_invoicesemail : contact.idInvoiceClient || '',
-            gm_tag: validateAndFormatTags(contact.idTags, hubspotTags) || '',
+            gm_tags: validateAndFormatTags(contact.idTags, hubspotTags) || '',
             gm_invoicesemail: contact.invoicesEmail || '',
             gm_isagency: contact.isAgency || '',
             gm_iscompany: contact.isCompany || '',
@@ -218,7 +218,7 @@ async function updateContactInHubSpot(contactId, contact, hubspotTags, clientNam
     }
 }
 
-async function createContactInHubSpot(contact, hubspotTags, clientName, retries = 100, delay = 1000) {
+async function createContactInHubSpot(contact, hubspotTags, clientName, retries = 300, delay = 1000) {
     let name = "";
     if (contact.customfields_firstname){
         name = contact.customfields_firstname;
@@ -239,7 +239,7 @@ async function createContactInHubSpot(contact, hubspotTags, clientName, retries 
             gm_createuser: contact.idCreateUser || '',
             gm_groupid: contact.idGroup || '',
             gm_invoicesemail : contact.invoicesEmail || '',
-            gm_tag: validateAndFormatTags(contact.idTags, hubspotTags)  || '',
+            gm_tags: validateAndFormatTags(contact.idTags, hubspotTags)  || '',
             gm_invoicesemail: contact.invoicesEmail || '',
             gm_isagency: contact.isAgency || '',
             gm_iscompany: contact.isCompany || '',
@@ -321,7 +321,7 @@ async function searchDealByIdMbudo(idMbudo) {
                 },
             ],
             properties: ['id', 'dealname', 'gm_beneficiarygroupname', 
-                'gm_benerificarynationality', 'gm_canceldate', 'gm_canceled', 
+                'gm_beneficiarynationality', 'gm_canceldate', 'gm_canceled', 
                 'gm_checkin', 'gm_clientgroupname', 'gm_clientname', 
                 'gm_confirmdate', 'gm_createdate', 'gm_end', 'gm_familyname', 
                 'gm_id_reserva', 'gm_idbeneficiary', 'gm_idbeneficiarygroup', 
@@ -352,6 +352,7 @@ async function createDealInHubSpot(dealData) {
             description: `ProductName: ${dealData.productName || ""} \nreference: ${dealData.reference || ""} \nidResource: ${dealData.idResource || ""} \nstart: ${dealData.start || ""}`,
             gm_beneficiarygroupname: dealData.beneficiaryGroupName || "",
             gm_beneficiarynationality: dealData.beneficiaryNationality || "",
+            
             gm_canceldate: convertToMidnightUTC(dealData.cancelDate) || "",
             gm_canceled: dealData.canceled ,
             gm_checkin: dealData.checkin ,
@@ -386,8 +387,8 @@ async function createDealInHubSpot(dealData) {
             amount: dealData.total || 0,
             createdate: convertToMidnightUTC(dealData.createDate) || "",
             closedate: dealData.checkin ? convertToMidnightUTC(dealData.end) : "", // Optional: Close date
-            dealstage: getDealStage(dealData) || 'appointmentscheduled', // Required: Deal stage
-            pipeline: 'default', // Required: Pipeline
+            dealstage: getDealStage(dealData) || '995617343', // Required: Deal stage
+            pipeline: '678993738', // Required: Pipeline
         },
     };
 
@@ -462,7 +463,7 @@ async function updateDealInHubSpot(dealId, dealData) {
             amount: dealData.total ,
             closedate: dealData.checkin ? convertToMidnightUTC(dealData.end) : "", // Optional: Close date
             dealstage: getDealStage(dealData), // Required: Deal stage
-            pipeline: 'default', // Required: Pipeline
+            pipeline: '678993738', // Required: Pipeline
         },
     };
 
@@ -731,14 +732,14 @@ function convertToMidnightUTC(dateString) {
 
 function getDealStage(dealData) {
     if (dealData.canceled || dealData.noshow) {
-        return "closedlost";
+        return "995617347";
     } else if (dealData.checkin) {
-        return "decisionmakerboughtin";
+        return "995617346";
     } else if(dealData.confirmDate){
-        return "appointmentscheduled"
+        return "995617343"
     }
     // Fallback to a default stage if none match
-    return "1328644288"; // Change this if there’s a different fallback stage
+    return "995617341"; // Change this if there’s a different fallback stage
 }
 
 function getCompanyDomainFromEmail(email) {
