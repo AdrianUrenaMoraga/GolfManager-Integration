@@ -57,14 +57,14 @@ const hubspotTags = [
     try {
         //const clients = await getClients();
 
-        var date = getCurrentDate();
-        /*
-        var startFormatted = `${date}T00:00:00+01:00`;
-        var endFormatted = `${date}T23:00:00+01:00`;
-        */ 
-        var startFormatted = `2025-01-01T01:00:00+01:00`;
-        var endFormatted = `2025-01-31T23:00:00+01:00`;
-        
+        var dates = getDates();
+
+        var startFormatted = `${dates.firstDay}T00:00:00+01:00`;
+        var endFormatted = `${dates.lastDay}T23:00:00+01:00`;
+       /*
+        var startFormatted = `2025-01-15T01:00:00+01:00`;
+        var endFormatted = `2025-01-15T23:00:00+01:00`;
+        */
         console.log('start:', startFormatted);
         console.log('end:', endFormatted);
         const deals = await getReservations(startFormatted,endFormatted);
@@ -125,7 +125,15 @@ const hubspotTags = [
         
 })();
 
-function getCurrentDate() {
+function getDates() {
     const today = new Date();
-    return today.toISOString().split('T')[0]; // Returns 'YYYY-MM-DD'
+    // First day of the current month
+    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    // Last day of the next month
+    const lastDayOfNextMonth = new Date(today.getFullYear(), today.getMonth() + 2, 0);
+
+    return {
+        firstDay: firstDayOfMonth.toISOString().split('T')[0], // 'YYYY-MM-DD'
+        lastDay: lastDayOfNextMonth.toISOString().split('T')[0] // 'YYYY-MM-DD'
+    };
 }

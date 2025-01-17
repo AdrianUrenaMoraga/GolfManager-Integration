@@ -102,8 +102,8 @@ async function searchContactByEmail(email) {
   }
 }
 
-async function searchContactByIdMbudo(idMbudo) {
-    if (idMbudo === null){
+async function searchContactByIdMbudo(idMbudo, maxRetries = 5) {
+    if (idMbudo === null) {
         return null;
     }
 
@@ -119,36 +119,51 @@ async function searchContactByIdMbudo(idMbudo) {
                 ],
             },
         ],
-        properties: ['firstname', 'email','phone', 'gm_id'], // Properties to fetch
+        properties: ['firstname', 'email', 'phone', 'gm_id'], // Properties to fetch
     };
-    
+
     let logId;
 
     try {
-        logId = await insertLog('contact', 'search',payload);
+        logId = await insertLog('contact', 'search', payload);
         if (!logId) {
             console.error('Failed to insert log. Aborting request.');
             await insertExceptionLog('Failed to insert log. Aborting request.');
             return null;
         }
-        const response = await hubspotAPI.post('/crm/v3/objects/contacts/search', payload);
 
-        if (response.data.total > 0) {
-            const contact = response.data.results[0];
-            await updateLog(logId, 'success', response.data, contact.id);
-            return contact; // Return the existing company ID
-        } else {
-            console.log('No contact found with gm_id:', idMbudo);
-            await updateLog(logId, 'success', { message: 'No company found', idMbudo });
-            return null;
+        for (let attempt = 0; attempt < maxRetries; attempt++) {
+            console.log(`Attempt ${attempt + 1} of ${maxRetries} to search for contact with gm_id: ${idMbudo}`);
+            try {
+                const response = await hubspotAPI.post('/crm/v3/objects/contacts/search', payload);
+
+                if (response.data.total > 0) {
+                    const contact = response.data.results[0];
+                    console.log(`Contact found`);
+                    await updateLog(logId, 'success', response.data, contact.id);
+                    return contact; // Return the found contact and exit early
+                } else {
+                    console.log('No contact found with gm_id:', idMbudo);
+                }
+            } catch (retryError) {
+                console.error(`Error during attempt ${attempt + 1} for contact search:`, retryError.message);
+                if (attempt === maxRetries - 1) {
+                    throw retryError; // Throw error after final attempt
+                }
+            }
         }
+
+        console.log(`No contact found after ${maxRetries} attempts.`);
+        await updateLog(logId, 'success', { message: 'No contact found after retries', idMbudo });
+        return null; // Return null if contact is not found after all retries
     } catch (error) {
         const responseError = error.response ? error.response.data : { message: error.message };
-        console.error('Error searching contact by gm_id:', error.response ? error.response.data : error);
-        await updateLog(logId, 'failure', responseError); 
+        console.error('Error searching contact by gm_id:', responseError);
+        await updateLog(logId, 'failure', responseError);
         return null;
     }
 }
+
 
 async function updateContactInHubSpot(contactId, contact, hubspotTags, clientName) {
     let name = "";
@@ -493,8 +508,8 @@ async function updateDealInHubSpot(dealId, dealData) {
     }
 }
 
-async function searchCompanyByIdMbudo(idMbudo) {
-    if(idMbudo === null){
+async function searchCompanyByIdMbudo(idMbudo, maxRetries = 5) {
+    if (idMbudo === null) {
         console.log("null id for company");
         return null;
     }
@@ -513,33 +528,48 @@ async function searchCompanyByIdMbudo(idMbudo) {
         ],
         properties: ['name', 'gm_email', 'gm_id'], // Properties to fetch
     };
-    
-    let logId;
-    try {
 
-        logId = await insertLog('company','search', payload);
+    let logId;
+
+    try {
+        logId = await insertLog('company', 'search', payload);
         if (!logId) {
             console.error('Failed to insert log. Aborting request.');
             await insertExceptionLog('Failed to insert log. Aborting request.');
             return null;
         }
-        const response = await hubspotAPI.post('/crm/v3/objects/companies/search', payload);
 
-        if (response.data.results.length > 0) {
-            const company = response.data.results[0];
-            await updateLog(logId, 'success', response.data, company.id); // Log the successful search
-            return company.id; // Return the existing company ID
-        } else {
-            console.log('No company found with id_mbudo:', idMbudo);
-            await updateLog(logId, 'sucess', { message: 'No company found', idMbudo })
-            return null;
+        for (let attempt = 0; attempt < maxRetries; attempt++) {
+            console.log(`Attempt ${attempt + 1} of ${maxRetries} to search for company with gm_id: ${idMbudo}`);
+            try {
+                const response = await hubspotAPI.post('/crm/v3/objects/companies/search', payload);
+
+                if (response.data.results.length > 0) {
+                    const company = response.data.results[0];
+                    console.log(`Company found`);
+                    await updateLog(logId, 'success', response.data, company.id); // Log the successful search
+                    return company.id; // Return the found company ID and exit early
+                } else {
+                    console.log('No company found with id_mbudo:', idMbudo);
+                }
+            } catch (retryError) {
+                console.error(`Error during attempt ${attempt + 1} for company search:`, retryError.message);
+                if (attempt === maxRetries - 1) {
+                    throw retryError; // Throw error after the final attempt
+                }
+            }
         }
+
+        console.log(`No company found after ${maxRetries} attempts.`);
+        await updateLog(logId, 'success', { message: 'No company found after retries', idMbudo });
+        return null; // Return null if no company is found after all retries
     } catch (error) {
-        console.error('Error searching company by id_mbudo:', error.response ? error.response.data : error);
+        console.error('Error searching company by gm_id:', error.response ? error.response.data : error);
         await updateLog(logId, 'failure', error); // Log the error
         return null;
     }
 }
+
 
 async function createCompanyInHubSpot(companyData, domain, retries = 10, delay = 1000) {
     let payload = {
@@ -723,10 +753,10 @@ function convertToMidnightUTC(dateString) {
     }
     const date = new Date(dateString);
     // Calculate the UTC-5 offset in milliseconds
-    const offset = 5 * 60 * 60 * 1000; // 6 hours in milliseconds
+    const offset = 0 * 60 * 60 * 1000; // 6 hours in milliseconds
 
     // Adjust the date to UTC-6
-    const utcMinus6Date = new Date(date.getTime() + offset);
+    const utcMinus6Date = new Date(date.getTime() - offset);
     return utcMinus6Date;
 }
 
