@@ -356,7 +356,8 @@ async function searchDealByIdMbudo(idMbudo) {
     } catch (error) {
         console.error(`Error searching deal by id_mbudo ${idMbudo}:`, error.response ? error.response.data : error.message);
         await insertExceptionLog(error);
-        throw error;
+        //throw error;
+        return null;
     }
 }
 

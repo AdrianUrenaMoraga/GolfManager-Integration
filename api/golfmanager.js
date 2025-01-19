@@ -90,7 +90,6 @@ async function getClientsFull() {
 }
 
 async function getClientFullByID(golfContactID) {
-    //console.log(JSON.stringify(golfContactID));
     try {
         const response = await axios.get(`${process.env.BASE_URL}/clientsfull`, {
             auth: {
@@ -103,8 +102,6 @@ async function getClientFullByID(golfContactID) {
             },
         });
 
-        // Log the response data
-        //console.log('searching client result-:', response.data[0]);
         return response.data[0];
     } catch (error) {
         // Handle errors
@@ -112,6 +109,7 @@ async function getClientFullByID(golfContactID) {
         if (error.response) {
             console.error('Error details:', error.response.data);
         }
+        return null;
     }
 }
 
@@ -163,6 +161,7 @@ const getReservations = async (start,end) => {
         if (error.response) {
             console.error('Error details:', error.response.data);
         }
+        return null;
     }
 };
 
