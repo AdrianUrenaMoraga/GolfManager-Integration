@@ -65,7 +65,7 @@ async function createOrUpdateCompanyInHubSpot(companyIds, companyData, domain) {
 }
 
 //Support methods
-async function searchContactByEmail(email) {
+async function searchContactByEmail(email,delay=1000) {
   try {
     const payload = {
         filterGroups: [
@@ -91,18 +91,32 @@ async function searchContactByEmail(email) {
             return null;
         }
   } catch (error) {
-    if (error.response && error.response.status === 404) {
-      console.log('No contact found with email:', email);
-  
-      return null;
+        const errorMessage = error.response?.data?.message || "";
+
+        // **Check for rate limit error**
+        if (errorMessage.includes("You have reached your secondly limit.")) {
+            console.warn(`Rate limit hit. Retrying in ${delay}ms... (Attempt ${attempt} of ${maxRetries})`);
+
+            if (attempt < maxRetries) {
+                await new Promise(resolve => setTimeout(resolve, delay)); // Wait before retrying
+                return searchContactByEmail(email, delay); // Recursively retry
+            }
+        }
+
+        // **Handle 404 (not found) gracefully**
+        if (error.response && error.response.status === 404) {
+            console.log(`No contact found with email: ${email}`);
+            return null;
+        }
+
+        // **For other errors, log and return null immediately**
+        console.error(`Error searching contact by email:`, error.response ? error.response.data : error);
+        await insertExceptionLog(error);
+        return null;
     }
-    console.error('Error searching contact by email:', error.response ? error.response.data : error);
-    await insertExceptionLog(error);
-    return null;
-  }
 }
 
-async function searchContactByIdMbudo(idMbudo, maxRetries = 5) {
+async function searchContactByIdMbudo(idMbudo, maxRetries = 5, delay=1000) {
     if (idMbudo === null) {
         return null;
     }
@@ -145,14 +159,25 @@ async function searchContactByIdMbudo(idMbudo, maxRetries = 5) {
                 } else {
                     console.log('No contact found with gm_id:', idMbudo);
                 }
-            } catch (retryError) {
-                console.error(`Error during attempt ${attempt + 1} for contact search:`, retryError.message);
-                if (attempt === maxRetries - 1) {
-                    throw retryError; // Throw error after final attempt
+            } catch (error) {
+                const errorMessage = error.response?.data?.message || "";
+
+                // **Check if it's a rate limit error**
+                if (errorMessage.includes("You have reached your secondly limit.")) {
+                    console.warn(`Rate limit hit. Retrying in ${delay}ms... (Attempt ${attempt} of ${maxRetries})`);
+
+                    if (attempt < maxRetries) {
+                        await new Promise(resolve => setTimeout(resolve, delay)); // Wait before retrying
+                        return searchContactByIdMbudo(idMbudo, attempt + 1, maxRetries, delay); // Recursively retry
+                    }
                 }
+
+                // **For other errors, log and return null immediately**
+                console.error(`Error during attempt ${attempt} for contact search:`, errorMessage);
+                await updateLog(logId, 'failure', error.response ? error.response.data : error);
+                return null;
             }
         }
-
         console.log(`No contact found after ${maxRetries} attempts.`);
         await updateLog(logId, 'success', { message: 'No contact found after retries', idMbudo });
         return null; // Return null if contact is not found after all retries
@@ -321,7 +346,7 @@ async function createContactInHubSpot(contact, hubspotTags, clientName, retries 
     }
 }
 
-async function searchDealByIdMbudo(idMbudo) {
+async function searchDealByIdMbudo(idMbudo,delay=1000) {
     try {
         const response = await hubspotAPI.post('/crm/v3/objects/deals/search', {
             filterGroups: [
@@ -354,9 +379,21 @@ async function searchDealByIdMbudo(idMbudo) {
         console.log(`No deal found for id_mbudo ${idMbudo}`);
         return null;
     } catch (error) {
-        console.error(`Error searching deal by id_mbudo ${idMbudo}:`, error.response ? error.response.data : error.message);
+        const errorMessage = error.response?.data?.message || "";
+
+        // **Check for rate limit error**
+        if (errorMessage.includes("You have reached your secondly limit.")) {
+            console.warn(`Rate limit hit. Retrying in ${delay}ms...)`);
+
+            if (attempt < maxRetries) {
+                await new Promise(resolve => setTimeout(resolve, delay)); // Wait before retrying
+                return searchDealByIdMbudo(idMbudo, delay); // Recursively retry
+            }
+        }
+
+        // **For other errors, log and return null immediately**
+        console.error(`Error searching deal by id_mbudo ${idMbudo}:`, errorMessage);
         await insertExceptionLog(error);
-        //throw error;
         return null;
     }
 }
@@ -509,7 +546,7 @@ async function updateDealInHubSpot(dealId, dealData) {
     }
 }
 
-async function searchCompanyByIdMbudo(idMbudo, maxRetries = 5) {
+async function searchCompanyByIdMbudo(idMbudo, maxRetries = 5, delay=1000) {
     if (idMbudo === null) {
         console.log("null id for company");
         return null;
@@ -553,14 +590,24 @@ async function searchCompanyByIdMbudo(idMbudo, maxRetries = 5) {
                 } else {
                     console.log('No company found with id_mbudo:', idMbudo);
                 }
-            } catch (retryError) {
-                console.error(`Error during attempt ${attempt + 1} for company search:`, retryError.message);
-                if (attempt === maxRetries - 1) {
-                    throw retryError; // Throw error after the final attempt
+            } catch (error) {
+                const errorMessage = error.response?.data?.message || "";
+
+                // **Check if it's a rate limit error**
+                if (errorMessage.includes("You have reached your secondly limit.")) {
+                    console.warn(`Rate limit hit. Retrying in ${delay}ms... (Attempt ${attempt} of ${maxRetries})`);
+
+                    if (attempt < maxRetries) {
+                        await new Promise(resolve => setTimeout(resolve, delay)); // Wait before retrying
+                        return searchCompanyByIdMbudo(idMbudo, attempt + 1, maxRetries, delay); // Recursively retry
+                    }
                 }
+                // **For other errors, log and return null immediately**
+                console.error(`Error during attempt ${attempt} for company search:`, errorMessage);
+                await updateLog(logId, 'failure', error.response ? error.response.data : error);
+                return null;
             }
         }
-
         console.log(`No company found after ${maxRetries} attempts.`);
         await updateLog(logId, 'success', { message: 'No company found after retries', idMbudo });
         return null; // Return null if no company is found after all retries

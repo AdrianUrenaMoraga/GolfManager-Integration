@@ -58,13 +58,13 @@ const hubspotTags = [
         //const clients = await getClients();
 
         var dates = getDates();
-
+        /*
         var startFormatted = `${dates.firstDay}T00:00:00+01:00`;
         var endFormatted = `${dates.lastDay}T23:00:00+01:00`;
-       /*
-        var startFormatted = `2025-01-15T01:00:00+01:00`;
-        var endFormatted = `2025-01-15T23:00:00+01:00`;
-        */
+       */
+        var startFormatted = `2022-01-01T01:00:00+01:00`;
+        var endFormatted = `2023-12-31T23:00:00+01:00`;
+        
         console.log('start:', startFormatted);
         console.log('end:', endFormatted);
         const deals = await getReservations(startFormatted,endFormatted);
